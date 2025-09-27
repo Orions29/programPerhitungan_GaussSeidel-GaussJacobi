@@ -1,2 +1,8 @@
-.vscode
-.gitignore
+build/
+*.exe
+*.obj
+*.o
+*.log
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
