@@ -4,27 +4,32 @@
 #include <iomanip>
 using namespace std;
 
-void gaussSeidelTemplate(vector<vector<double>> &persIn, vector<double> &hasil, vector<double> &hasilPrev, short *jmlpers, short *var, double &err, double *&tempHasilPers, int &iterasi, bool mode)
+/**
+ * @brief Template Engine untuk menjalankan perhitungan Gauss-Jacobi dan Gauss-Seidel
+ *
+ * @param persIn Array Persamaan yang berisi konstanta dan nilai Z pada akhir
+ * @param hasil Array untuk menyimpan hasil persamaan
+ * @param hasilPrev Array untuk menyimpan hasil sebelum perhitungan
+ * @param jmlpers Jumlah Persamaan yang mau dihitung
+ * @param var Jumlah Variabel pada tiap Persamaan
+ * @param err Mean Absolute Error pada tiap hasil persamaan sebelum dan setelah perhitungan
+ * @param iterasi jumlah iterasi yang terlah dilakukan
+ * @param mode `0` / `False` untuk Gauss-Jacobi dan \enmd `1` / `True` untuk Gauss-Seidel
+ */
+void gaussSeidelTemplate(const vector<vector<double>> &persIn, vector<double> &hasil, vector<double> &hasilPrev, const short *jmlpers, const short *var, double &err, int &iterasi, bool mode)
 {
-    double pembagi = 0.0;
+    hasilPrev = hasil;
+    double pembagi = 0.0, tempErr = 0.0;
+    err = 0;
     cout << "\033[1;5m>> Iterasi ke - \033[0m" << iterasi << endl;
     for (int i = 0; i < *jmlpers; i++)
     {
+        tempErr = 0;
         hasil[*var - 1] = 0;
-        tempHasilPers[i] = hasil[i];
-        for (int j = 0; j < *var; j++)
+        pembagi = persIn[i][i];
+        for (int j = 0; j < *var - 1; j++)
         {
-            if (j == i)
-            {
-                pembagi = persIn[i][j];
-                continue;
-            }
-            else if (j == (*var - 1))
-            {
-                hasil[*var - 1] += persIn[i][j];
-                continue;
-            }
-            else
+            if (j != i)
             {
                 if (!mode)
                 {
@@ -35,27 +40,16 @@ void gaussSeidelTemplate(vector<vector<double>> &persIn, vector<double> &hasil, 
             }
         }
         // Hasil Persamaan
-        hasil[i] = hasil[*var - 1] / pembagi;
-        cout << "Pers ke - (" << i + 1 << ") Hasil = " << hasil[i] << ", \033[31mError Absolute: \033[0m" << abs(tempHasilPers[i] - hasil[i]) << endl;
+        hasil[i] = (hasil[*var - 1] + persIn[i][*var - 1]) / pembagi;
+        tempErr = abs(hasilPrev[i] - hasil[i]);
+        err += tempErr;
+        cout << "Pers ke - (" << i + 1 << ") Hasil = " << hasil[i] << ", \033[31mError Absolute: \033[0m" << tempErr << endl;
         // Buat Debug
         // cout << temp << " << Temp || pembagi >> " << pembagi << endl;
-        if (i == *jmlpers - 1)
-        {
-            err = 0;
-            for (int h = 0; h < *jmlpers; h++)
-            {
-                err += abs(tempHasilPers[h] - hasil[h]);
-            }
-            // Menjadi Error Rata rata
-            err /= *var - 1;
-            cout << "Rata-rata Error Absolute : " << err << endl;
-        }
     }
-    if (!mode)
-    {
-        // Mengupdate Gauss Jacobi
-        hasilPrev = hasil;
-    }
+    // Menjadi Error Rata rata
+    err /= *jmlpers;
+    cout << "Rata-rata Error Absolute : " << err << endl;
     iterasi++;
 }
 
@@ -75,10 +69,9 @@ void gaussMenu(vector<vector<double>> &persIn, vector<double> hasil, short *jmlp
     system("cls");
     bool mode, pil;
     int iterasi = 0, iterasiMax = 0;
-    double err = 0, errTres = 0.0, pembagi = 0.0, tempHasilPers[*var - 1];
-    double *ptrTempHasilPers = tempHasilPers;
+    double err = 0, errTres = 0.0, pembagi = 0.0;
     // Buat Gauss jacobi
-    vector<double> hasilPrev = hasil;
+    vector<double> hasilPrev;
     if (!menu)
     {
         cout << "\033[34m<<Metode Gauss-Jacobi>>\033[0m" << endl;
@@ -113,10 +106,10 @@ void gaussMenu(vector<vector<double>> &persIn, vector<double> hasil, short *jmlp
                 break;
         } while (true);
 
-        cout << "Operasi Penyelesaian: " << setprecision(10) << endl;
+        cout << "Operasi Penyelesaian: " << fixed << setprecision(10) << endl;
         do
         {
-            gaussSeidelTemplate(persIn, hasil, hasilPrev, jmlpers, var, err, ptrTempHasilPers, iterasi, menu);
+            gaussSeidelTemplate(persIn, hasil, hasilPrev, jmlpers, var, err, iterasi, menu);
         } while (err > errTres);
     }
     else
@@ -133,62 +126,10 @@ void gaussMenu(vector<vector<double>> &persIn, vector<double> hasil, short *jmlp
             else
                 break;
         } while (true);
+        cout << "Operasi Penyelesaian: " << fixed << setprecision(10) << endl;
         for (int i = 0; i <= iterasiMax; i++)
         {
-            gaussSeidelTemplate(persIn, hasil, hasilPrev, jmlpers, var, err, ptrTempHasilPers, iterasi, menu);
-        }
-    }
-}
-
-// FIXME - Keknya bakal di gabung dengan fungsi diatas jadi sabar
-void gaussJacobi(vector<vector<double>> &persIn, vector<double> hasilPers, short *jmlpers, short *var, bool mode)
-{
-    int iterasi = 0;
-    double err = 100, errTres = 0, temp = 0, pembagi = 0, tempHasil[*var - 1] = {};
-    vector<double> hasilAwal;
-    cout << hasilPers[0] << " " << hasilPers[1] << " " << hasilPers[2] << endl;
-    if (!mode)
-    {
-        cout << "\033[1;31m Masukkan Err Treshold>>\033[0m ";
-        cin >> errTres;
-        while (err > errTres)
-        {
-            hasilAwal = hasilPers;
-            cout << ">> Iterasi ke - " << iterasi << "\n";
-            for (int i = 0; i < *jmlpers; i++)
-            {
-                temp = 0;
-                tempHasil[i] = hasilAwal[i];
-                for (int j = 0; j < *var; j++)
-                {
-                    if (j == i)
-                    {
-                        pembagi = persIn[i][j];
-                        continue;
-                    }
-                    else if (j == *var - 1)
-                    {
-                        temp += persIn[i][j];
-                        continue;
-                    }
-                    temp += -(persIn[i][j]) * hasilAwal[j];
-                }
-                // Hasil Persamaan
-                hasilPers[i] = temp / pembagi;
-                cout << "Pers ke - (" << i + 1 << ") Err= " << abs(tempHasil[i] - hasilPers[i]) << " , hasil : " << hasilPers[i] << endl;
-                cout << temp << " << Temp || pembagi >> " << pembagi << endl;
-                if (i == *jmlpers - 1)
-                {
-                    for (int h = 0; h < *jmlpers; h++)
-                    {
-                        err += abs(tempHasil[h] - hasilPers[h]);
-                    }
-                    // Menjadi Error Threshold Rata rata
-                    err /= *var - 1;
-                }
-            }
-            iterasi++;
-            // persIn[0]
+            gaussSeidelTemplate(persIn, hasil, hasilPrev, jmlpers, var, err, iterasi, menu);
         }
     }
 }
@@ -205,7 +146,7 @@ void mainMenu(vector<vector<double>> &persIn, vector<double> &hasil)
         cin >> var;
         if (cin.fail())
         {
-            cout << "\033[1;32mMasukan Tidak Valid!\033[0m";
+            cout << "\033[1;31mMasukan Tidak Valid!\033[0m";
 
             cin.clear();
             cin.ignore(1000, '\n');
@@ -225,7 +166,7 @@ void mainMenu(vector<vector<double>> &persIn, vector<double> &hasil)
 
         if (cin.fail())
         {
-            cout << "\033[1;32mMasukan Tidak Valid!\033[0m";
+            cout << "\033[1;31mMasukan Tidak Valid!\033[0m";
 
             cin.clear();
             cin.ignore(1000, '\n');
@@ -263,7 +204,7 @@ void mainMenu(vector<vector<double>> &persIn, vector<double> &hasil)
                 }
                 if (cin.fail())
                 {
-                    cout << "\033[1;32mKonstanta Tidak Valid!\033[0m";
+                    cout << "\033[1;31mKonstanta Tidak Valid!\033[0m";
                     cin.clear();
                     cin.ignore(1000, '\n');
                     continue;
@@ -283,7 +224,7 @@ void mainMenu(vector<vector<double>> &persIn, vector<double> &hasil)
 
             if (cin.fail())
             {
-                cout << "\033[1;32mMasukan Tidak Valid!\033[0m";
+                cout << "\033[1;31mMasukan Tidak Valid!\033[0m";
 
                 cin.clear();
                 cin.ignore(1000, '\n');
@@ -298,6 +239,7 @@ void mainMenu(vector<vector<double>> &persIn, vector<double> &hasil)
     while (true)
     {
         cout << "Persamaan yang Mau dihitung ada [" << jmlPers << "] Dengan masing-masing memiliki [" << var - 1 << "] variabel" << endl;
+        cout.unsetf(ios::fixed);
         for (int i = 0; i < jmlPers; i++)
         {
             cout << "Persamaan (" << i + 1 << ") ";
@@ -334,13 +276,13 @@ void mainMenu(vector<vector<double>> &persIn, vector<double> &hasil)
 
             if (cin.fail())
             {
-                cout << "\033[1;32mMasukan Tidak Valid!\033[0m";
+                cout << "\033[1;31mMasukan Tidak Valid!\033[0m";
                 cin.clear();
                 cin.ignore(1000, '\n');
             }
             else if (menu > 3)
             {
-                cout << "\033[1;32mOut Of Index!\033[0m";
+                cout << "\033[1;31mOut Of Index!\033[0m";
                 cin.clear();
                 cin.ignore(1000, '\n');
             }
