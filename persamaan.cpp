@@ -4,65 +4,100 @@
 #include <iomanip>
 using namespace std;
 
-// void gaussSeidelTemplate(vector<vector<double>> &persIn, vector<double> &hasil, short *jmlpers, short *var, double &err, double &errTres, double &pembagi, double *&tempHasilPers)
-// {
-//     int iterasi = 0;
-//     double err = 100, errTres = 0.0, pembagi = 0.0, tempHasilPers[*var - 1];
-//     cout << "\033[1;5m>> Iterasi ke - \033[0m" << iterasi << endl;
-//     for (int i = 0; i < *jmlpers; i++)
-//     {
-//         hasil[*var - 1] = 0;
-//         tempHasilPers[i] = hasil[i];
-//         for (int j = 0; j < *var; j++)
-//         {
-//             if (j == i)
-//             {
-//                 pembagi = persIn[i][j];
-//                 continue;
-//             }
-//             else if (j == (*var - 1))
-//             {
-//                 hasil[j] += persIn[i][j];
-//                 continue;
-//             }
-//             else
-//                 hasil[*var - 1] += -(persIn[i][j]) * hasil[j];
-//         }
-//         hasil[i] = hasil[*var - 1] / pembagi;
-//         cout << "Pers ke - (" << i + 1 << ") Hasil = " << hasil[i] << ", \033[31mError Absolute: \033[0m" << abs(tempHasilPers[i] - hasil[i]) << endl;
-//         // Buat Debug
-//         // cout << temp << " << Temp || pembagi >> " << pembagi << endl;
-//         if (i == *jmlpers - 1)
-//         {
-//             for (int h = 0; h < *jmlpers; h++)
-//             {
-//                 err += abs(tempHasilPers[h] - hasil[h]);
-//             }
-//             // Menjadi Error Threshold Rata rata
-//             err /= *var - 1;
-//             cout << "Rata-rata Error Absolute : " << err << endl;
-//         }
-//     }
-// }
+void gaussSeidelTemplate(vector<vector<double>> &persIn, vector<double> &hasil, vector<double> &hasilPrev, short *jmlpers, short *var, double &err, double *&tempHasilPers, int &iterasi, bool mode)
+{
+    double pembagi = 0.0;
+    cout << "\033[1;5m>> Iterasi ke - \033[0m" << iterasi << endl;
+    for (int i = 0; i < *jmlpers; i++)
+    {
+        hasil[*var - 1] = 0;
+        tempHasilPers[i] = hasil[i];
+        for (int j = 0; j < *var; j++)
+        {
+            if (j == i)
+            {
+                pembagi = persIn[i][j];
+                continue;
+            }
+            else if (j == (*var - 1))
+            {
+                hasil[*var - 1] += persIn[i][j];
+                continue;
+            }
+            else
+            {
+                if (!mode)
+                {
+                    hasil[*var - 1] += -(persIn[i][j]) * hasilPrev[j];
+                }
+                else
+                    hasil[*var - 1] += -(persIn[i][j]) * hasil[j];
+            }
+        }
+        // Hasil Persamaan
+        hasil[i] = hasil[*var - 1] / pembagi;
+        cout << "Pers ke - (" << i + 1 << ") Hasil = " << hasil[i] << ", \033[31mError Absolute: \033[0m" << abs(tempHasilPers[i] - hasil[i]) << endl;
+        // Buat Debug
+        // cout << temp << " << Temp || pembagi >> " << pembagi << endl;
+        if (i == *jmlpers - 1)
+        {
+            err = 0;
+            for (int h = 0; h < *jmlpers; h++)
+            {
+                err += abs(tempHasilPers[h] - hasil[h]);
+            }
+            // Menjadi Error Rata rata
+            err /= *var - 1;
+            cout << "Rata-rata Error Absolute : " << err << endl;
+        }
+    }
+    if (!mode)
+    {
+        // Mengupdate Gauss Jacobi
+        hasilPrev = hasil;
+    }
+    iterasi++;
+}
 
 /**
-  @brief Fungsi Untuk Penyelesaian non-analitik dengan Metode Gauss Jacobi
-  @param persIn Vector Persamaan yang mau diselesaikan
-  @param hasil Vector untuk menyimpan hasil perhitungan
-  @param jmlpers jumlah persamaan yang mau diselesaikan
-  @param var Jumlah variabel yang ada pada masing masing
-                pertamaan (Variabel terakhir sebagai konstanta pengali Z_result)
-  @param mode - `0` or`False`berhenti di error_value tertentu
-                - `1` or `True` berhenti di iterasi
+ *  @brief Fungsi Untuk Penyelesaian non-analitik dengan Metode Gauss Jacobi
+ *  @param persIn Vector Persamaan yang mau diselesaikan
+ *  @param hasil Vector untuk menyimpan hasil perhitungan
+ *  @param jmlpers jumlah persamaan yang mau diselesaikan
+ *  @param var Jumlah variabel yang ada pada masing masing
+ *             pertamaan (Variabel terakhir sebagai konstanta pengali Z_result)
+ *  @param mode - `0` or`False`berhenti di error_value tertentu
+ *              - `1` or `True` berhenti di iterasi
  */
-void gaussSeidel(vector<vector<double>> &persIn, vector<double> hasil, short *jmlpers, short *var, bool mode)
+void gaussMenu(vector<vector<double>> &persIn, vector<double> hasil, short *jmlpers, short *var, bool menu)
 {
     // Membersihkan Seluruh Program Sebelumnya
     system("cls");
-    int iterasi = 0;
-    double err = 100, errTres = 0.0, pembagi = 0.0, tempHasilPers[*var - 1];
-    cout << "\033[34m<<Metode Gauss-Seidel>>\033[0m" << endl;
+    bool mode, pil;
+    int iterasi = 0, iterasiMax = 0;
+    double err = 0, errTres = 0.0, pembagi = 0.0, tempHasilPers[*var - 1];
+    double *ptrTempHasilPers = tempHasilPers;
+    // Buat Gauss jacobi
+    vector<double> hasilPrev = hasil;
+    if (!menu)
+    {
+        cout << "\033[34m<<Metode Gauss-Jacobi>>\033[0m" << endl;
+    }
+    else
+        cout << "\033[34m<<Metode Gauss-Seidel>>\033[0m" << endl;
     cout << "\033[32mNilai Awalan:\033[0m \n X1: " << hasil[0] << ", X2: " << hasil[1] << ", X3: " << hasil[2] << endl;
+    // Error Handling Mode
+    do
+    {
+        cout << "Mode Apa \033[31m(0) Max Err\033[0m \033[32m(1) Max Iterasi :\033[0m ";
+        cin >> mode;
+        if (cin.fail())
+        {
+            cout << "\033[1;31mError Input\033[0m - Woops! Inputkan lagi";
+        }
+        else
+            break;
+    } while (true);
     if (!mode)
     {
         // Error Handling memasukkan float
@@ -79,50 +114,33 @@ void gaussSeidel(vector<vector<double>> &persIn, vector<double> hasil, short *jm
         } while (true);
 
         cout << "Operasi Penyelesaian: " << setprecision(10) << endl;
-        while (err > errTres)
+        do
         {
-            cout << "\033[1;5m>> Iterasi ke - \033[0m" << iterasi << endl;
-            for (int i = 0; i < *jmlpers; i++)
+            gaussSeidelTemplate(persIn, hasil, hasilPrev, jmlpers, var, err, ptrTempHasilPers, iterasi, menu);
+        } while (err > errTres);
+    }
+    else
+    {
+        // Error Handling memasukkan Iterasi ke
+        do
+        {
+            cout << "\033[32mBerapa Perulangan:\033[0m ";
+            cin >> iterasiMax;
+            if (cin.fail())
             {
-                hasil[*var - 1] = 0;
-                tempHasilPers[i] = hasil[i];
-                for (int j = 0; j < *var; j++)
-                {
-                    if (j == i)
-                    {
-                        pembagi = persIn[i][j];
-                        continue;
-                    }
-                    else if (j == (*var - 1))
-                    {
-                        hasil[j] += persIn[i][j];
-                        continue;
-                    }
-                    else
-                        hasil[*var - 1] += -(persIn[i][j]) * hasil[j];
-                }
-                hasil[i] = hasil[*var - 1] / pembagi;
-                cout << "Pers ke - (" << i + 1 << ") Hasil = " << hasil[i] << ", \033[31mError Absolute: \033[0m" << abs(tempHasilPers[i] - hasil[i]) << endl;
-                // Buat Debug
-                // cout << temp << " << Temp || pembagi >> " << pembagi << endl;
-                if (i == *jmlpers - 1)
-                {
-                    for (int h = 0; h < *jmlpers; h++)
-                    {
-                        err += abs(tempHasilPers[h] - hasil[h]);
-                    }
-                    // Menjadi Error Threshold Rata rata
-                    err /= *var - 1;
-                    cout << "Rata-rata Error Absolute : " << err << endl;
-                }
+                cout << "\033[1;31mError Input\033[0m - Woops! Inputkan lagi";
             }
-            iterasi++;
-            // persIn[0]
+            else
+                break;
+        } while (true);
+        for (int i = 0; i <= iterasiMax; i++)
+        {
+            gaussSeidelTemplate(persIn, hasil, hasilPrev, jmlpers, var, err, ptrTempHasilPers, iterasi, menu);
         }
     }
 }
 
-// FIXME - Bentar ini variabel nya baru kuubah ubah belum jadi ini
+// FIXME - Keknya bakal di gabung dengan fungsi diatas jadi sabar
 void gaussJacobi(vector<vector<double>> &persIn, vector<double> hasilPers, short *jmlpers, short *var, bool mode)
 {
     int iterasi = 0;
@@ -334,10 +352,10 @@ void mainMenu(vector<vector<double>> &persIn, vector<double> &hasil)
         switch (menu)
         {
         case 1:
-            gaussJacobi(persIn, hasil, &jmlPers, &var, 0);
+            gaussMenu(persIn, hasil, &jmlPers, &var, 0);
             break;
         case 2:
-            gaussSeidel(persIn, hasil, &jmlPers, &var, 0);
+            gaussMenu(persIn, hasil, &jmlPers, &var, 1);
             break;
         case 3:
             exit(0);
